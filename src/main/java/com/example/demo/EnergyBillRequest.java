@@ -2,28 +2,23 @@ package com.example.demo;
 
 import org.springframework.stereotype.Component;
 
-@Component
-public class EnergyBillRequest {
+import java.util.List;
 
+//@Component
+public class EnergyBillRequest {
     private String referenceDateStart;
     private String referenceDateEnd;
-    // Add any other fields as needed
+    private List<String> billSources;
 
-    public String[] getBillSources() {
-        return billSources;
-    }
+    // Constructors, getters, and setters
 
-    public void setBillSources(String[] billSources) {
+
+    public EnergyBillRequest(String referenceDateStart, String referenceDateEnd, List<String> billSources) {
+        this.referenceDateStart = referenceDateStart;
+        this.referenceDateEnd = referenceDateEnd;
         this.billSources = billSources;
     }
 
-    private String[] billSources ;
-
-    // Constructor
-    public EnergyBillRequest() {
-    }
-
-    // Getters and setters
     public String getReferenceDateStart() {
         return referenceDateStart;
     }
@@ -39,6 +34,13 @@ public class EnergyBillRequest {
     public void setReferenceDateEnd(String referenceDateEnd) {
         this.referenceDateEnd = referenceDateEnd;
     }
-    // Add getters and setters for other fields as needed
+
+    public List<String> getBillSources() {
+        return billSources;
+    }
+
+    public void setBillSources(List<String> billSources) {
+        this.billSources = billSources;
+    }
 }
 
