@@ -3,6 +3,5 @@ spring:
     name: demo
 
 way2:
-  subscriptionId: "abd488f6-9a38-448f-ba24-19c3a227a4f7"
-  apiKey: "subscription-id"
-  url:  "https://api-prod.way2.com.br"
+  apiVersion: "2"
+  apiKey: "bb4213cbba6647cba464f660dea16550"

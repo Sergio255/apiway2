@@ -1,18 +1,22 @@
 package com.example.demo;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+
 
 @FeignClient(name = "external-api", url = "https://api-prod.way2.com.br")
 public interface ExternalApiClient {
 
-    @PostMapping("/ph/billing/api/{subscriptionId}/energy-bills")
+    @PostMapping(value = "/ph/billing/api/{subscriptionId}/energy-bills",
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     String getEnergyBills(
-            @RequestBody String requestBody,
-            @RequestParam("api-version") String apiVersion,
-            @RequestParam("subscriptionId") String subscriptionId,
-            @RequestParam("x-way2-key") String apiKey
+            @RequestBody EnergyBillRequest requestBody,
+            @RequestHeader("Accept") String accept,
+            @RequestHeader("Content-Type") String contentType,
+            @RequestHeader("api-version") String apiVersion,
+            @RequestHeader("x-way2-key") String apiKey,
+            @PathVariable("subscriptionId") String subscriptionId
     );
 }
+
