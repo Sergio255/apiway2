@@ -1,14 +1,15 @@
 package com.example.demo;
 
-import com.example.demo.jsonprocess.Address;
-import com.example.demo.jsonprocess.BillableItem;
-import com.example.demo.jsonprocess.Customer;
-import com.example.demo.jsonprocess.Distributor;
-import com.example.demo.jsonprocess.InvoiceData;
-import com.example.demo.jsonprocess.InvoiceItem;
-import com.example.demo.jsonprocess.OtherItem;
-import com.example.demo.jsonprocess.QualityItem;
-import com.example.demo.jsonprocess.TaxItem;
+import com.example.demo.dto.*;
+import com.example.demo.entity.CustomerEntity;
+import com.example.demo.entity.DistributorEntity;
+import com.example.demo.entity.InvoiceEntity;
+import com.example.demo.entity.InvoiceItemEntity;
+import com.example.demo.mapper.EntityDtoMapper;
+import com.example.demo.repository.ICustomerRepository;
+import com.example.demo.repository.IDistributorRepository;
+import com.example.demo.repository.IInvoiceItemRepository;
+import com.example.demo.repository.IInvoiceRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,13 +37,26 @@ public class EnergyBillController {
 
     private final ObjectMapper objectMapper;
 
+    private final IInvoiceRepository iInvoiceRepository;
+
+    private final ICustomerRepository iCustomerRepository;
+
+    private final IDistributorRepository iDistributorRepository;
+
+    private final IInvoiceItemRepository iInvoiceItemRepository;
+
+
     public EnergyBillController(
             Way2Config way2Config,
-            ExternalApiClient externalApiClient, ObjectMapper objectMapper
+            ExternalApiClient externalApiClient, ObjectMapper objectMapper, IInvoiceRepository iInvoiceRepository, ICustomerRepository iCustomerRepository, IDistributorRepository iDistributorRepository, IInvoiceItemRepository iInvoiceItemRepository
     ) {
         this.way2Config = way2Config;
         this.externalApiClient = externalApiClient;
         this.objectMapper = objectMapper;
+        this.iInvoiceRepository = iInvoiceRepository;
+        this.iCustomerRepository = iCustomerRepository;
+        this.iDistributorRepository = iDistributorRepository;
+        this.iInvoiceItemRepository = iInvoiceItemRepository;
     }
 
     @PostMapping("/create-energy-bill")
@@ -87,12 +101,15 @@ public class EnergyBillController {
 
         JsonNode items = getItems(jsonNode);
 
-        List<InvoiceData> invoiceDataList = new ArrayList<>();
+        int itemCount = jsonNode.size();
+        System.out.println(">>> NUMERO DE ITENS : " + itemCount);
+
+        System.out.println(items);
 
         processItems(
-                items,
-                invoiceDataList
+                items
         );
+
 
 
     }
@@ -106,28 +123,141 @@ public class EnergyBillController {
 
     }
 
-    private void processItems(JsonNode items, List<InvoiceData> invoiceDataList) {
+    private void processItems(JsonNode items) {
+
+        List<InvoiceDTO> invoiceDTOList = new ArrayList<>();
         for (JsonNode item : items) {
-            invoiceDataList.add(createItemsFromNode(item));
+            invoiceDTOList.add(createItemsFromNode(item));
         }
-        System.out.println(invoiceDataList);
     }
 
-    private InvoiceData createItemsFromNode(JsonNode item) {
+    private InvoiceDTO createItemsFromNode(JsonNode item) {
 
-        List<InvoiceItem> invoiceItemList = new ArrayList<>();
+        System.out.println(">>> PASSEI AQUI "  );
 
-        List<BillableItem> billableItemList = new ArrayList<>();
 
-        List<TaxItem> taxItemList = new ArrayList<>();
+        List<InvoiceItemDTO> invoiceItemList = new ArrayList<>();
 
-        List<OtherItem> otherItemsList = new ArrayList<>();
+        List<BillableItemDTO> billableItemList = new ArrayList<>();
 
-        List<QualityItem> qualityItemsList = new ArrayList<>();
+        List<TaxItemDTO> taxItemList = new ArrayList<>();
 
-        Long id = getLongReturnFromCheckValue(
-                item.get("id")
+        List<OtherItemDTO> otherItemsList = new ArrayList<>();
+
+        List<QualityItemDTO> qualityItemsList = new ArrayList<>();
+
+        Long invoiceItemId = getLongReturnFromCheckValue(
+                item.get("invoiceItemId")
         );
+
+        String invoiceSeries = getStringReturnFromCheckValueAsText(
+                item.get("invoiceSeries")
+        );
+
+        LocalDateTime issueDate = convertDateTime(
+                item.get("issueDate").asText()
+        );
+
+        int billingDays = getIntReturnFromCheckValue(
+                item.get("billingDays")
+        );
+
+        String automaticDebitCode = getStringReturnFromCheckValueAsText(
+                item.get("automaticDebitCode")
+        );
+
+        String meterId = getStringReturnFromCheckValueAsText(
+                item.get("meterId")
+        );
+
+        String monthDelay = getStringReturnFromCheckValueAsText(
+                item.get("monthDelay")
+        );
+
+        String valueDelay = getStringReturnFromCheckValueAsText(
+                item.get("valueDelay")
+        );
+
+        String tensionGroup = getStringReturnFromCheckValueAsText(
+                item.get("tensionGroup")
+        );
+
+        String fareSubGroup = getStringReturnFromCheckValueAsText(
+                item.get("fareSubGroup")
+        );
+
+        String annotations = getStringReturnFromCheckValueAsText(
+                item.get("annotations")
+        );
+
+        String subscriptionId = getStringReturnFromCheckValueAsText(
+                item.get("subscriptionId")
+        );
+
+        Long customerId = getLongReturnFromCheckValue(
+                item.get("customerId")
+        );
+
+        String customerName = getStringReturnFromCheckValueAsText(
+                item.get("customerName")
+        );
+
+        JsonNode addressNode = item.get("address");
+
+        String publicPlace = getStringReturnFromCheckValueAsText(
+                addressNode.get("publicPlace")
+        );
+
+        String neighborhood = getStringReturnFromCheckValueAsText(
+                addressNode.get("neighborhood")
+        );
+
+        String zipCode = getStringReturnFromCheckValueAsText(
+                addressNode.get("zipCode")
+        );
+
+        String city = getStringReturnFromCheckValueAsText(
+                addressNode.get("city")
+        );
+
+        String state = getStringReturnFromCheckValueAsText(
+                addressNode.get("state")
+        );
+
+
+        CustomerDTO customerDTO = new CustomerDTO(
+                customerId,
+                customerName,
+                publicPlace,
+                neighborhood,
+                zipCode,
+                city,
+                state
+        );
+
+        CustomerEntity customerEntity = EntityDtoMapper.convertToEntity(customerDTO);
+        iCustomerRepository.save(customerEntity);
+
+        CustomerEntity savedCustomer = iCustomerRepository.save(customerEntity);
+
+        String cnpjDistributor = getStringReturnFromCheckValueAsText(
+                item.get("cnpjDistributor")
+        );
+
+        String energyProvider = getStringReturnFromCheckValueAsText(
+                item.get("energyProvider")
+        );
+
+        DistributorDTO distributorDTO = new DistributorDTO(
+                cnpjDistributor,
+                energyProvider
+        );
+
+        DistributorEntity distributorEntity = EntityDtoMapper.convertToEntity(distributorDTO);
+
+        iDistributorRepository.save(distributorEntity);
+
+        DistributorEntity distributorSaved = iDistributorRepository.save(distributorEntity);
 
         String sdpId = getStringReturnFromCheckValueAsText(
                 item.get("sdpId")
@@ -140,13 +270,8 @@ public class EnergyBillController {
         String site = getStringReturnFromCheckValueAsText(
                 item.get("site")
         );
-
-        String energyProvider = getStringReturnFromCheckValueAsText(
-                item.get("energyProvider")
-        );
-
         String billSource = getStringReturnFromCheckValueAsText(
-                item.get("energyProvider")
+                item.get("billSource")
         );
 
         String suppliedVoltageType = getStringReturnFromCheckValueAsText(
@@ -197,34 +322,30 @@ public class EnergyBillController {
                 item.get("dueDate").asText()
         );
 
-        List<BillableItem> billableItemArrayList = new ArrayList<>();
+        List<BillableItemDTO> billableItemArrayList = new ArrayList<>();
 
         billableItemList = processBillableItems(
-                id,
                 item,
                 billableItemArrayList
         );
 
-        List<TaxItem> taxItemArrayList = new ArrayList<>();
+        List<TaxItemDTO> taxItemArrayList = new ArrayList<>();
 
         taxItemList = processTaxItems(
-                id,
                 item,
                 taxItemArrayList
         );
 
-        List<OtherItem> otherItemsArrayList = new ArrayList<>();
+        List<OtherItemDTO> otherItemsArrayList = new ArrayList<>();
 
         otherItemsList = processOtherItems(
-                id,
                 item,
                 otherItemsArrayList
         );
 
-        List<QualityItem> qualityItemArrayList = new ArrayList<>();
+        List<QualityItemDTO> qualityItemArrayList = new ArrayList<>();
 
         qualityItemsList = processQualityItems(
-                id,
                 item,
                 qualityItemArrayList
         );
@@ -293,121 +414,16 @@ public class EnergyBillController {
                 item.get("installationId")
         );
 
-        String customerId = getStringReturnFromCheckValueAsText(
-                item.get("customerId")
-        );
-
         String className = getStringReturnFromCheckValueAsText(
-                item.get("className")
+                item.get("class")
         );
 
         String subClass = getStringReturnFromCheckValueAsText(
                 item.get("subClass")
         );
 
-        String invoiceNumber = getStringReturnFromCheckValueAsText(
-                item.get("invoiceNumber")
-        );
-
-        String invoiceSeries = getStringReturnFromCheckValueAsText(
-                item.get("invoiceSeries")
-        );
-
-        LocalDateTime issueDate = convertDateTime(
-                item.get("issueDate").asText()
-        );
-
-        int billingDays = getIntReturnFromCheckValue(
-                item.get("billingDays")
-        );
-
-        String automaticDebitCode = getStringReturnFromCheckValueAsText(
-                item.get("automaticDebitCode")
-        );
-
-        String meterId = getStringReturnFromCheckValueAsText(
-                item.get("meterId")
-        );
-
-        String monthDelay = getStringReturnFromCheckValueAsText(
-                item.get("monthDelay")
-        );
-
-        String valueDelay = getStringReturnFromCheckValueAsText(
-                item.get("valueDelay")
-        );
-
-        String tensionGroup = getStringReturnFromCheckValueAsText(
-                item.get("tensionGroup")
-        );
-
-        String fareSubGroup = getStringReturnFromCheckValueAsText(
-                item.get("fareSubGroup")
-        );
-
-        String annotations = getStringReturnFromCheckValueAsText(
-                item.get("annotations")
-        );
-
-        String customerName = getStringReturnFromCheckValueAsText(
-                item.get("customerName")
-        );
-
-        JsonNode addressNode = item.get("address");
-
-        String publicPlace = getStringReturnFromCheckValueAsText(
-                addressNode.get("publicPlace")
-        );
-
-        String neighborhood = getStringReturnFromCheckValueAsText(
-                addressNode.get("neighborhood")
-        );
-
-        String zipCode = getStringReturnFromCheckValueAsText(
-                addressNode.get("zipCode")
-        );
-
-        String city = getStringReturnFromCheckValueAsText(
-                addressNode.get("city")
-        );
-
-        String state = getStringReturnFromCheckValueAsText(
-                addressNode.get("state")
-        );
-
-        Address address = new Address(
-                customerId,
-                publicPlace,
-                neighborhood,
-                zipCode,
-                city,
-                state
-        );
-
-        Customer customer = new Customer(
-                id,
-                customerId,
-                customerName,
-                address
-        );
-
-        String cnpjDistributor = getStringReturnFromCheckValueAsText(
-                item.get("cnpjDistributor")
-        );
-
-        String subscriptionId = getStringReturnFromCheckValueAsText(
-                item.get("subscriptionId")
-        );
-
-        Distributor distributor = new Distributor(
-                id,
-                cnpjDistributor,
-                energyProvider
-        );
-
-        invoiceItemList.add(
-                new InvoiceItem(
-                        id,
+        InvoiceItemDTO invoiceItemDTO =
+                new InvoiceItemDTO(
                         sdpId,
                         uc,
                         site,
@@ -417,7 +433,7 @@ public class EnergyBillController {
                         tariffType,
                         billClass,
                         insertedAt,
-                        insertedAt,
+                        referenceDate,
                         readingBegin,
                         readingEnd,
                         readingDate,
@@ -445,8 +461,18 @@ public class EnergyBillController {
                         contractNumber,
                         installationId,
                         className,
-                        subClass,
-                        invoiceNumber,
+                        subClass
+                );
+
+        invoiceItemList.add(invoiceItemDTO);
+
+        System.out.println(invoiceDTOList);
+
+        InvoiceItemEntity invoiceItemEntity = EntityDtoMapper.convertToEntity(invoiceItemDTO);
+        iInvoiceItemRepository.save(invoiceItemEntity);
+
+        InvoiceDTO invoiceDTO =
+                new InvoiceDTO(
                         invoiceSeries,
                         issueDate,
                         billingDays,
@@ -457,85 +483,22 @@ public class EnergyBillController {
                         tensionGroup,
                         fareSubGroup,
                         annotations,
-                        customer,
-                        distributor,
-                        subscriptionId
-                )
-        );
-        return new InvoiceData(Long.valueOf(id), invoiceItemList);
+                        subscriptionId,
+                        customerDTO,
+                        distributorDTO,
+                        invoiceItemList
+                );
+
+        InvoiceEntity invoiceEntity = EntityDtoMapper.convertToEntity(invoiceDTO, savedCustomer,distributorSaved);
+
+        iInvoiceRepository.save(invoiceEntity);
+
+        return invoiceDTO;
     }
 
-    private List<QualityItem> processQualityItems(
-            Long id,
+    private List<BillableItemDTO> processBillableItems(
             JsonNode item,
-            List<QualityItem> qualityItemArrayList
-    ) {
-
-        // QualityItems
-        JsonNode qualityItems = item.get("qualityItems");
-        for (JsonNode qualityItem : qualityItems) {
-
-            String name = getStringReturnFromCheckValueAsText(
-                    qualityItem.get("name")
-            );
-
-            BigDecimal value = getBigDecimalReturnFromCheckValue(
-                    qualityItem.get("value")
-            );
-
-            boolean hasCustomData = getBooleanReturnFromCheckValue(
-                    qualityItems.get("hasCustomData")
-            );
-
-            qualityItemArrayList.add(
-                    new QualityItem(
-                            id,
-                            name,
-                            value
-                    )
-            );
-        }
-        return qualityItemArrayList;
-    }
-
-    private List<OtherItem> processOtherItems(
-            Long id,
-            JsonNode item,
-            List<OtherItem> otherItemsList
-    ) {
-        // OtherItems
-        JsonNode otherItems = item.get("otherItems");
-        for (JsonNode otherItem : otherItems) {
-
-            String name = getStringReturnFromCheckValueAsText(
-                    otherItem.get("name")
-            );
-
-            BigDecimal value = getBigDecimalReturnFromCheckValue(
-                    otherItem.get("value")
-            );
-
-            boolean hasCustomData = getBooleanReturnFromCheckValue(
-                    otherItem.get("hasCustomData")
-            );
-
-            otherItemsList.add(
-                    new OtherItem(
-                            id,
-                            name,
-                            value,
-                            hasCustomData
-                    )
-            );
-        }
-
-        return otherItemsList;
-    }
-
-    private List<BillableItem> processBillableItems(
-            Long id,
-            JsonNode item,
-            List<BillableItem> billableItemList
+            List<BillableItemDTO> billableItemList
     ) {
         // BillableItems
         JsonNode billableItems = item.get("billableItems");
@@ -591,8 +554,7 @@ public class EnergyBillController {
             );
 
             billableItemList.add(
-                    new BillableItem(
-                            id,
+                    new BillableItemDTO(
                             area,
                             name,
                             measured,
@@ -613,10 +575,9 @@ public class EnergyBillController {
 
     }
 
-    private List<TaxItem> processTaxItems(
-            Long id,
+    private List<TaxItemDTO> processTaxItems(
             JsonNode item,
-            List<TaxItem> taxItemList
+            List<TaxItemDTO> taxItemList
     ) {
         // TaxItems
         JsonNode taxItems = item.get("taxItems");
@@ -652,8 +613,7 @@ public class EnergyBillController {
             );
 
             taxItemList.add(
-                    new TaxItem(
-                            id,
+                    new TaxItemDTO(
                             taxItemName,
                             taxableValue,
                             taxRate,
@@ -667,6 +627,69 @@ public class EnergyBillController {
 
         return taxItemList;
 
+    }
+
+    private List<QualityItemDTO> processQualityItems(
+            JsonNode item,
+            List<QualityItemDTO> qualityItemArrayList
+    ) {
+
+        // QualityItems
+        JsonNode qualityItems = item.get("qualityItems");
+        for (JsonNode qualityItem : qualityItems) {
+
+            String name = getStringReturnFromCheckValueAsText(
+                    qualityItem.get("name")
+            );
+
+            BigDecimal value = getBigDecimalReturnFromCheckValue(
+                    qualityItem.get("value")
+            );
+
+            boolean hasCustomData = getBooleanReturnFromCheckValue(
+                    qualityItems.get("hasCustomData")
+            );
+
+            qualityItemArrayList.add(
+                    new QualityItemDTO(
+                            name,
+                            value
+                    )
+            );
+        }
+        return qualityItemArrayList;
+    }
+
+    private List<OtherItemDTO> processOtherItems(
+            JsonNode item,
+            List<OtherItemDTO> otherItemsList
+    ) {
+        // OtherItems
+        JsonNode otherItems = item.get("otherItems");
+        for (JsonNode otherItem : otherItems) {
+
+            String name = getStringReturnFromCheckValueAsText(
+                    otherItem.get("name")
+            );
+
+            BigDecimal value = getBigDecimalReturnFromCheckValue(
+                    otherItem.get("value")
+            );
+
+            boolean hasCustomData = getBooleanReturnFromCheckValue(
+                    otherItem.get("hasCustomData")
+            );
+
+            otherItemsList.add(
+                    new OtherItemDTO(
+                            name,
+                            value,
+                            hasCustomData
+                    )
+            );
+        }
+
+        return otherItemsList;
     }
 
 

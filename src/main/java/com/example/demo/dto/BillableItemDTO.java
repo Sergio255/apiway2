@@ -1,4 +1,4 @@
-package com.example.demo.jsonprocess;
+package com.example.demo.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,9 +9,8 @@ import java.math.BigDecimal;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class BillableItem {
+public class BillableItemDTO {
 
-    Long invoiceId;
     String area;
     String name;
     BigDecimal measured;
